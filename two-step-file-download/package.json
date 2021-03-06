@@ -1,0 +1,14 @@
+{
+  "name": "two-step-file-download",
+  "version": "0.0.1",
+  "description": "Download files by overview page links",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "lezram",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  }
+}
