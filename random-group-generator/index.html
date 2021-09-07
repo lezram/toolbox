@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Random Group Generator</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script>
+        function generate() {
+            const namesValue = document.getElementById("values").value;
+            const groupAmount = parseInt(document.getElementById("groupAmount").value);
+            const roundAmount = parseInt(document.getElementById("roundAmount").value);
+
+            if (!namesValue) {
+                return;
+            }
+
+            const rawNames = namesValue.split(/\n|\r\n/);
+            let values = rawNames.filter(name => (!!name));
+
+            if (!values && values.length <= 0) {
+                return;
+            }
+
+            const map = getInitialMap(values);
+            const copyValues = [...values];
+
+            const result = [];
+
+            for (let round = 0; round < roundAmount; round++) {
+                shuffle(copyValues);
+                result[round] = createGroups(copyValues, map, groupAmount);
+            }
+
+            document.getElementById("groups").innerHTML = getDisplayElements(result);
+            document.getElementById("statistic").innerHTML = getStatistic(map, roundAmount, groupAmount);
+        }
+
+        function getStatistic(map, roundAmount, groupAmount) {
+            if (roundAmount <= 1 || groupAmount <= 1) {
+                return "";
+            }
+
+            let savedMatches = [];
+            let output = "";
+            for (const key in map) {
+                for (const member in map[key]) {
+                    if (savedMatches.indexOf(key + member) !== -1 || savedMatches.indexOf(member + key) !== -1) {
+                        continue;
+                    }
+
+                    if (map[key][member] >= roundAmount || map[key][member] <= 0) {
+                        savedMatches.push(key + member);
+                        output += `<div class="list-group-item">${key} with ${member}: ${map[key][member]} times</div>`
+                    }
+                }
+            }
+
+            return `<div class="list-group">${output}</div><textarea style="width: 100%" >${JSON.stringify(map, null, '\t')}</textarea>`;
+        }
+
+        function getDisplayElements(result) {
+            let output = "";
+
+            let roundCounter = 1;
+            for (const round of result) {
+                let groupsOutput = "";
+                let groupCounter = 1;
+                for (const group of round) {
+
+                    let membersOutput = "";
+                    let memberCounter = 0;
+                    for (const member of group) {
+                        membersOutput += `<div class="member list-group-item">${member}</div>`;
+                        memberCounter++;
+                    }
+
+                    groupsOutput += `<div class="group list-group"><li class="list-group-item active" aria-current="true"><h2>Group ${groupCounter} (${memberCounter} Members)</h2></li>${membersOutput}</div>`;
+                    groupCounter++
+                }
+
+                output += `<div class="round col-sm"><h1>Round ${roundCounter}</h1>${groupsOutput}</div>`;
+                roundCounter++;
+            }
+
+            return output;
+        }
+
+        function createGroups(names, map, groupAmount) {
+            const groupSize = Math.floor(names.length / groupAmount);
+            const namesCopy = [...names];
+
+            const groups = [];
+            let counter = 0;
+
+            while (namesCopy.length > 0) {
+                const groupIndex = counter % groupAmount;
+                if (!groups[groupIndex]) {
+                    groups[groupIndex] = []
+                }
+
+
+                let index;
+                if (groups[groupIndex].length > 0) {
+                    index = findBestFittingIndex(namesCopy, map, groups[groupIndex]);
+                } else {
+                    index = Math.floor(Math.random() * namesCopy.length);
+                }
+
+                const item = namesCopy.splice(index, 1)[0];
+                updateMap(map, groups[groupIndex], item);
+                groups[groupIndex].push(item);
+
+                if (groups[groupIndex].length >= groupSize) {
+                    counter++;
+                }
+            }
+
+            return groups;
+        }
+
+
+        function findBestFittingIndex(names, map, currentGroup) {
+
+            let winnerIndex = 0;
+            let lowestSum = null;
+            let lowestSecondary = null;
+
+            for (const i in names) {
+                const name = names[i];
+
+                let currentSum = 0;
+                for (const member of currentGroup) {
+                    currentSum += map[name][member];
+                }
+
+                let secondarySum = 0;
+                for (const key in map[name]) {
+                    secondarySum += map[name][key];
+                }
+
+                if (lowestSum == null
+                    || currentSum < lowestSum
+                    || (lowestSum && currentSum == lowestSum && lowestSecondary && secondarySum < lowestSecondary)) {
+
+                    winnerIndex = i;
+                    lowestSum = currentSum;
+                    lowestSecondary = secondarySum;
+                }
+            }
+
+            return winnerIndex;
+        }
+
+        function getInitialMap(values) {
+            const map = {};
+
+            for (const value1 of values) {
+                map[value1] = {};
+
+                for (const value2 of values) {
+                    if (value1 !== value2) {
+                        map[value1][value2] = 0;
+                    }
+                }
+
+            }
+
+            return map;
+        }
+
+
+        function updateMap(map, currentGroup, item) {
+            for (const member of currentGroup) {
+                map[item][member] += 1;
+                map[member][item] += 1;
+            }
+
+            return map;
+        }
+
+        // https://stackoverflow.com/a/2450976
+        function shuffle(array) {
+            let currentIndex = array.length, temporaryValue, randomIndex;
+
+            while (0 !== currentIndex) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex -= 1;
+
+                temporaryValue = array[currentIndex];
+                array[currentIndex] = array[randomIndex];
+                array[randomIndex] = temporaryValue;
+            }
+
+            return array;
+        }
+    </script>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="row justify-content-center">
+
+
+        <div class="col-6">
+            <div>
+                <div class="mb-3">
+                    <label for="values" class="form-label">Values</label>
+                    <textarea id="values" class="form-control" rows="10">Hope Weaver
+Yvette Lloyd
+Derek Alvarez
+Lorena Massey
+Kayla Bass
+Jacob Ford
+Rolando Hampton
+Blanca Lawrence
+Flora Ellis
+Conrad Wise
+                    </textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="groupAmount" class="form-label">Group Amount</label>
+                    <input type="number" class="form-control" id="groupAmount" value="2"/>
+                </div>
+                <div class="mb-3">
+                    <label for="roundAmount" class="form-label">Round Amount</label>
+                    <input type="number" class="form-control" id="roundAmount" value="3"/>
+                </div>
+                <button onclick="generate()" class="btn btn-primary">Generate</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div id="statistic">
+
+    </div>
+</div>
+
+<div class="container">
+    <div id="groups" class="row">
+    </div>
+</div>
+
+</body>
+</html>
